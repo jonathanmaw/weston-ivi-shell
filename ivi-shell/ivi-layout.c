@@ -131,6 +131,9 @@ struct shellWarningArgs {
     enum ivi_layout_warning_flag flag;
 };
 
+static struct weston_view *
+ivi_layout_get_weston_view(struct ivi_layout_surface *surface);
+
 static struct ivi_layout ivilayout = {0};
 
 struct ivi_layout *
@@ -2479,6 +2482,109 @@ ivi_layout_GetKeyboardFocusSurfaceId(struct ivi_layout_surface **pSurfaceId)
     return 0;
 }
 
+static void get_surface_position(struct weston_view *view, float sx, float sy,
+                                 float *x, float *y)
+{
+    if (view->transform.enabled) {
+        struct weston_vector v = { { sx, sy, 0.0f, 1.0f } };
+        weston_matrix_transform(&view->transform.matrix, &v);
+        if (fabsf(v.f[3]) < 1e-6) {
+            weston_log("warning: numerical instability in "
+                       "weston_view_from_global(), divisor = %g\n",
+                       v.f[3]);
+            *x = 0;
+            *y = 0;
+        } else {
+            *x = v.f[0] / v.f[3];
+            *y = v.f[1] / v.f[3];
+        }
+    } else {
+        *x = sx + view->geometry.x;
+        *y = sy + view->geometry.y;
+    }
+}
+
+WL_EXPORT int32_t
+ivi_layout_SetPointerFocusOn(struct ivi_layout_surface *ivisurf)
+{
+    struct weston_view *view;
+    struct weston_seat *seat;
+    uint32_t found_pointer = 0;
+
+    if (ivisurf == NULL) {
+        weston_log("%s: invalid argument\n", __FUNCTION__);
+        return -1;
+    }
+
+    view = ivi_layout_get_weston_view(ivisurf);
+
+    wl_list_for_each(seat, &get_instance()->compositor->seat_list, link) {
+        if (seat->pointer) {
+            float x,y;
+            get_surface_position(view, 0, 0, &x, &y);
+            seat->pointer->x = wl_fixed_from_double(x);
+            seat->pointer->y = wl_fixed_from_double(y);
+            weston_pointer_set_focus(seat->pointer, view,
+                                     wl_fixed_from_int(0),
+                                     wl_fixed_from_int(0));
+            found_pointer = 1;
+        }
+    }
+
+    if (!found_pointer) {
+        weston_log("%s: Could not find a pointer to set focus\n", __FUNCTION__);
+        return -1;
+    }
+
+    return 0;
+}
+
+WL_EXPORT int32_t
+ivi_layout_GetPointerFocusSurfaceId(struct ivi_layout_surface **pSurfaceId)
+{
+    /* Note: This function will only return the focussed surface for the first
+     * pointer found. */
+    struct weston_seat *seat;
+    struct weston_surface *w_surf;
+    struct ivi_layout_surface *layout_surf;
+
+    if (pSurfaceId == NULL) {
+        weston_log("%s: invalid argument\n", __FUNCTION__);
+        return -1;
+    }
+
+    /* Find the first seat that has a pointer */
+    wl_list_for_each(seat, &get_instance()->compositor->seat_list, link) {
+        if (seat != NULL && seat->pointer != NULL)
+            break;
+    }
+    if (seat == NULL) {
+        weston_log("%s: Failed to find a seat\n", __FUNCTION__);
+        return -1;
+    }
+
+    if (seat->pointer->focus == NULL) {
+        *pSurfaceId = NULL;
+        return 0;
+    }
+
+    if (seat->pointer->focus->surface == NULL) {
+        weston_log("%s: focus has no surface\n", __FUNCTION__);
+        return -1;
+    }
+
+    w_surf = seat->pointer->focus->surface;
+    /* Find the layout surface that matches that surface */
+    wl_list_for_each(layout_surf, &get_instance()->list_surface, link) {
+        if (layout_surf->surface == w_surf) {
+            *pSurfaceId = layout_surf;
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
 WL_EXPORT int32_t
 ivi_layout_surfaceSetDestinationRectangle(struct ivi_layout_surface *ivisurf,
                                           int32_t x, int32_t y,
@@ -3350,6 +3456,52 @@ handle_seat_create(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_pointer_focus(struct wl_listener *listener, void *data)
+{
+    struct weston_pointer *pointer = data;
+    struct ivi_layout_surface *layout_surf = NULL;
+    if (pointer->focus) {
+        wl_list_for_each(layout_surf, &get_instance()->list_surface, link) {
+            if (layout_surf->surface == pointer->focus->surface) {
+                layout_surf->prop.hasPointerFocus = 1;
+                layout_surf->pending.prop.hasPointerFocus = 1;
+            } else {
+                layout_surf->prop.hasPointerFocus = 0;
+                layout_surf->pending.prop.hasPointerFocus = 0;
+            }
+            layout_surf->event_mask |= IVI_NOTIFICATION_POINTER_FOCUS;
+            wl_signal_emit(&layout_surf->property_changed, layout_surf);
+	    layout_surf->event_mask = 0;
+        }
+    }
+}
+
+static void
+setup_focus_listener(struct wl_listener *listener, void *data)
+{
+    struct weston_seat *seat = data;
+    if (seat->pointer_device_count > 0 && seat->pointer) {
+        add_notification(&seat->pointer->focus_signal, handle_pointer_focus, NULL);
+    }
+}
+
+static void
+setup_pointer_listeners(void)
+{
+    struct weston_seat *seat;
+    wl_list_for_each(seat, &get_instance()->compositor->seat_list, link) {
+
+        /* hook into any updated caps signals */
+        add_notification(&seat->updated_caps_signal, setup_focus_listener, NULL);
+
+        /* Iterate over all seats, and set up pointer focus listeners for every seat's pointer */
+        if (seat->pointer_device_count > 0) {
+            add_notification(&seat->pointer->focus_signal, handle_pointer_focus, NULL);
+        }
+    }
+}
+
+static void
 ivi_layout_initWithCompositor(struct weston_compositor *ec)
 {
     struct ivi_layout *layout = get_instance();
@@ -3368,6 +3520,9 @@ ivi_layout_initWithCompositor(struct weston_compositor *ec)
     wl_signal_init(&layout->surface_notification.configure_changed);
 
     wl_signal_init(&layout->warning_signal);
+
+    /* Add a pointer created listener that adds pointer focus listeners */
+    setup_pointer_listeners();
 
     /* Add layout_layer at the last of weston_compositor.layer_list */
     weston_layer_init(&layout->layout_layer, ec->layer_list.prev);
