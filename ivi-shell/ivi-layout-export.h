@@ -710,6 +710,28 @@ int32_t
 ivi_layout_GetKeyboardFocusSurfaceId(struct ivi_layout_surface **pSurfaceId);
 
 /**
+ * \brief Set the pointer focus on a certain surface              
+ * To receive pointer events, 2 conditions must be fulfilled:     
+ *  1- The surface must accept events from pointer. See ilm_UpdateInputEventAcceptanceOn
+ *  2- The pointer focus must be set on that surface. The compositor may do this automatically.
+ *
+ * \return  0 if the method call was successful
+ * \return -1 if the method call failed
+ */
+int32_t
+ivi_layout_SetPointerFocusOn(struct ivi_layout_surface *ivisurf);
+
+/**
+ * \brief Get the indentifier of the surface which hold the pointer focus
+ *
+ * \return  0 if the method call was successful
+ * \return -1 if the method call was failed
+ */
+int32_t
+ivi_layout_GetPointerFocusSurfaceId(struct ivi_layout_surface **pSurfaceId);
+
+
+/**
  * \brief Set the destination area of a surface within a layer for rendering.
  *        The surface will be scaled to this rectangle for rendering.
  *
