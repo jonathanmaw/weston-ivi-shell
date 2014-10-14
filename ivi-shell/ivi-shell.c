@@ -43,6 +43,8 @@
 #include <limits.h>
 
 #include "ivi-shell.h"
+#include "ivi-shell-private.h"
+#include "xdg-shell.h"
 #include "ivi-application-server-protocol.h"
 #include "ivi-layout.h"
 
@@ -64,6 +66,12 @@ struct ivi_shell_surface
 
     struct wl_listener configured_listener;
 };
+// for input focus step1
+typedef void
+(*keyboard_key)(struct weston_keyboard_grab *grab,
+                uint32_t time, uint32_t key, uint32_t state);
+
+extern keyboard_key keyboard_key_func;
 
 struct ivi_shell_setting
 {
@@ -547,6 +555,10 @@ module_init(struct weston_compositor *compositor,
         return -1;
     }
 
+    if (xdg_global_create(compositor->wl_display, 1, shell) == NULL) {
+        return -1;
+    }
+
     if (ivi_shell_setting_create(&setting) != 0) {
         return 0;
     }
@@ -576,6 +588,7 @@ module_init(struct weston_compositor *compositor,
     }
     else{
 	ivi_layout->initWithCompositor(compositor);
+	set_ivi_layout_interface(ivi_layout);
     }
 
     /*Call module_init of ivi-modules which are defined in weston.ini*/
