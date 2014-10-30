@@ -71,6 +71,7 @@ struct ivi_layout_layer {
     struct wl_list list_screen;
     struct wl_list link_to_surface;
     uint32_t id_layer;
+    struct weston_layer layer;
 
     struct ivi_layout *layout;
 
@@ -173,7 +174,6 @@ struct ivi_layout {
         struct wl_signal configure_changed;
     } surface_notification;
 
-    struct weston_layer layout_layer;
     struct wl_signal warning_signal;
 
     struct ivi_layout_transition_set* transitions;

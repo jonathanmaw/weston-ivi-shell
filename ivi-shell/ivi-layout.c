@@ -988,13 +988,17 @@ commit_list_screen(struct ivi_layout *layout)
 
         iviscrn->event_mask = 0;
 
-        /* Clear view list of layout layer */
-        wl_list_init(&layout->layout_layer.view_list.link);
+        wl_list_for_each_reverse(ivilayer, &iviscrn->order.list_layer, order.link) {
 
-        wl_list_for_each(ivilayer, &iviscrn->order.list_layer, order.link) {
+            /* If ivilayer's weston_layer is in a list, remove it. */
+            if (ivilayer->layer.link.next)
+                wl_list_remove(&ivilayer->layer.link);
 
             if (ivilayer->prop.visibility == 0)
                 continue;
+
+            /* Clear view list of layer */
+            wl_list_init(&ivilayer->layer.view_list.link);
 
             wl_list_for_each(ivisurf, &ivilayer->order.list_surface, order.link) {
                 struct weston_view *tmpview = NULL;
@@ -1010,11 +1014,14 @@ commit_list_screen(struct ivi_layout *layout)
                 if (ivisurf->surface == NULL || tmpview == NULL)
                     continue;
 
-                weston_layer_entry_insert(&layout->layout_layer.view_list,
+                weston_layer_entry_insert(&ivilayer->layer.view_list,
                                           &tmpview->layer_link);
 
                 ivisurf->surface->output = iviscrn->output;
             }
+
+            /* Add the layer to the compositor's layer list */
+            wl_list_insert(layout->compositor->layer_list.prev, &ivilayer->layer.link);
         }
 
         break;
@@ -1999,6 +2006,8 @@ ivi_layout_layerCreateWithDimension(uint32_t id_layer,
 
     wl_list_insert(&layout->list_layer, &ivilayer->link);
 
+    weston_layer_init(&ivilayer->layer, NULL);
+
     wl_signal_emit(&layout->layer_notification.created, ivilayer);
 
     return ivilayer;
@@ -2031,6 +2040,8 @@ ivi_layout_layerRemove(struct ivi_layout_layer *ivilayer)
     remove_orderlayer_from_screen(ivilayer);
     remove_link_to_surface(ivilayer);
     ivi_layout_layerRemoveNotification(ivilayer);
+
+    wl_list_remove(&ivilayer->link);
 
     free(ivilayer);
 
@@ -3175,9 +3186,6 @@ ivi_layout_initWithCompositor(struct weston_compositor *ec)
     wl_signal_init(&layout->surface_notification.configure_changed);
 
     wl_signal_init(&layout->warning_signal);
-
-    /* Add layout_layer at the last of weston_compositor.layer_list */
-    weston_layer_init(&layout->layout_layer, ec->layer_list.prev);
 
     create_screen(ec);
 
