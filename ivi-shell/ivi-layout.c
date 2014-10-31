@@ -887,6 +887,21 @@ commit_list_layer(struct ivi_layout *layout)
                                              NULL, NULL,
                                              ivilayer->pending.prop.transitionDuration);
         }
+
+        /* If changes happen to destination geometry, reset the layer's mask */
+        if (ivilayer->pending.prop.destX != ivilayer->prop.destX
+            || ivilayer->pending.prop.destY != ivilayer->prop.destY
+            || ivilayer->pending.prop.destWidth != ivilayer->prop.destWidth
+            || ivilayer->pending.prop.destHeight != ivilayer->prop.destHeight) {
+            weston_layer_set_mask(&ivilayer->layer,
+                                  ivilayer->pending.prop.destX,
+                                  ivilayer->pending.prop.destY,
+                                  ivilayer->pending.prop.destWidth,
+                                  ivilayer->pending.prop.destHeight);
+
+        }
+
+
         ivilayer->pending.prop.transitionType = IVI_LAYOUT_TRANSITION_NONE;
 
         ivilayer->prop = ivilayer->pending.prop;
@@ -2007,6 +2022,7 @@ ivi_layout_layerCreateWithDimension(uint32_t id_layer,
     wl_list_insert(&layout->list_layer, &ivilayer->link);
 
     weston_layer_init(&ivilayer->layer, NULL);
+    weston_layer_set_mask(&ivilayer->layer, 0, 0, width, height);
 
     wl_signal_emit(&layout->layer_notification.created, ivilayer);
 
