@@ -338,7 +338,8 @@ westonsurface_destroy_from_ivisurface(struct wl_listener *listener, void *data)
     wl_list_init(&ivisurf->layer_rotation.link);
     wl_list_init(&ivisurf->surface_pos.link);
     wl_list_init(&ivisurf->layer_pos.link);
-    wl_list_init(&ivisurf->scaling.link);
+    wl_list_init(&ivisurf->surface_scaling.link);
+    wl_list_init(&ivisurf->layer_scaling.link);
 
     ivisurf->surface = NULL;
     ivi_layout_surfaceRemove(ivisurf);
@@ -683,47 +684,75 @@ update_layer_position(struct ivi_layout_layer *ivilayer,
 }
 
 static void
-update_scale(struct ivi_layout_layer *ivilayer,
-               struct ivi_layout_surface *ivisurf)
+update_surface_scale(struct ivi_layout_surface *ivisurf)
 {
     struct weston_view *view;
-    struct weston_matrix *matrix = &ivisurf->scaling.matrix;
+    struct weston_matrix *matrix = &ivisurf->surface_scaling.matrix;
     float sx = 0.0f;
     float sy = 0.0f;
-    float lw = 0.0f;
-    float sw = 0.0f;
-    float lh = 0.0f;
-    float sh = 0.0f;
 
+    /* Get the first view from the surface */
     wl_list_for_each(view, &ivisurf->surface->views, surface_link)
     {
-        if (view != NULL) {
+        if (view != NULL)
+        {
             break;
         }
     }
-
-    if (view == NULL) {
+    if (view == NULL)
+    {
         return;
     }
 
-    if (ivisurf->prop.destWidth == 0 && ivisurf->prop.destHeight == 0) {
+    if (ivisurf->prop.destWidth == 0 && ivisurf->prop.destHeight == 0)
+    {
         ivisurf->prop.destWidth  = ivisurf->surface->width_from_buffer;
         ivisurf->prop.destHeight = ivisurf->surface->height_from_buffer;
     }
 
-    lw = ((float)ivilayer->prop.destWidth  / (float)ivilayer->prop.sourceWidth );
-    sw = ((float)ivisurf->prop.destWidth   / (float)ivisurf->prop.sourceWidth  );
-    lh = ((float)ivilayer->prop.destHeight / (float)ivilayer->prop.sourceHeight);
-    sh = ((float)ivisurf->prop.destHeight  / (float)ivisurf->prop.sourceHeight );
-    sx = sw * lw;
-    sy = sh * lh;
+    sx = ((float)ivisurf->prop.destWidth / (float)ivisurf->prop.sourceWidth);
+    sy = ((float)ivisurf->prop.destHeight / (float)ivisurf->prop.sourceHeight);
 
-    wl_list_remove(&ivisurf->scaling.link);
+    wl_list_remove(&ivisurf->surface_scaling.link);
     weston_matrix_init(matrix);
     weston_matrix_scale(matrix, sx, sy, 1.0f);
-
     wl_list_insert(&view->geometry.transformation_list,
-                   &ivisurf->scaling.link);
+                   &ivisurf->surface_scaling.link);
+
+    weston_view_set_transform_parent(view, NULL);
+    weston_view_update_transform(view);
+}
+
+static void
+update_layer_scale(struct ivi_layout_layer *ivilayer,
+                   struct ivi_layout_surface *ivisurf)
+{
+    struct weston_view *view;
+    struct weston_matrix *matrix = &ivisurf->layer_scaling.matrix;
+    float sx = 0.0f;
+    float sy = 0.0f;
+
+    /* Get the first view from the surface */
+    wl_list_for_each(view, &ivisurf->surface->views, surface_link)
+    {
+        if (view != NULL)
+        {
+            break;
+        }
+    }
+    if (view == NULL)
+    {
+        return;
+    }
+
+    sx = ((float)ivilayer->prop.destWidth / (float)ivilayer->prop.sourceWidth);
+    sy = ((float)ivilayer->prop.destHeight / (float)ivilayer->prop.sourceHeight);
+
+    wl_list_remove(&ivisurf->layer_scaling.link);
+    weston_matrix_init(matrix);
+    weston_matrix_scale(matrix, sx, sy, 1.0f);
+    wl_list_insert(&view->geometry.transformation_list,
+                   &ivisurf->layer_scaling.link);
 
     weston_view_set_transform_parent(view, NULL);
     weston_view_update_transform(view);
@@ -737,9 +766,10 @@ update_prop(struct ivi_layout_layer *ivilayer,
         update_opacity(ivilayer, ivisurf);
         update_layer_orientation(ivilayer, ivisurf);
         update_layer_position(ivilayer, ivisurf);
+        update_layer_scale(ivilayer, ivisurf);
         update_surface_position(ivisurf);
         update_surface_orientation(ivilayer, ivisurf);
-        update_scale(ivilayer, ivisurf);
+        update_surface_scale(ivisurf);
 
         ivisurf->update_count++;
 
@@ -3165,12 +3195,14 @@ ivi_layout_surfaceSetNativeContent(struct weston_surface *surface,
         wl_list_remove(&ivisurf->layer_rotation.link);
         wl_list_remove(&ivisurf->surface_pos.link);
         wl_list_remove(&ivisurf->layer_pos.link);
-        wl_list_remove(&ivisurf->scaling.link);
+        wl_list_remove(&ivisurf->surface_scaling.link);
+        wl_list_remove(&ivisurf->layer_scaling.link);
         wl_list_init(&ivisurf->surface_rotation.link);
         wl_list_init(&ivisurf->layer_rotation.link);
         wl_list_init(&ivisurf->surface_pos.link);
         wl_list_init(&ivisurf->layer_pos.link);
-        wl_list_init(&ivisurf->scaling.link);
+        wl_list_init(&ivisurf->surface_scaling.link);
+        wl_list_init(&ivisurf->layer_scaling.link);
 
     }
 
@@ -3284,13 +3316,15 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
     weston_matrix_init(&ivisurf->layer_rotation.matrix);
     weston_matrix_init(&ivisurf->surface_pos.matrix);
     weston_matrix_init(&ivisurf->layer_pos.matrix);
-    weston_matrix_init(&ivisurf->scaling.matrix);
+    weston_matrix_init(&ivisurf->surface_scaling.matrix);
+    weston_matrix_init(&ivisurf->layer_scaling.matrix);
 
     wl_list_init(&ivisurf->surface_rotation.link);
     wl_list_init(&ivisurf->layer_rotation.link);
     wl_list_init(&ivisurf->surface_pos.link);
     wl_list_init(&ivisurf->layer_pos.link);
-    wl_list_init(&ivisurf->scaling.link);
+    wl_list_init(&ivisurf->surface_scaling.link);
+    wl_list_init(&ivisurf->layer_scaling.link);
 
     init_surfaceProperties(&ivisurf->prop);
     ivisurf->pixelformat = IVI_LAYOUT_SURFACE_PIXELFORMAT_RGBA_8888;
