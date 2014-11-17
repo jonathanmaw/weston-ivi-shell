@@ -913,7 +913,7 @@ ivi_layout_transition_layer_render_order(struct ivi_layout_layer* layer,
     struct ivi_layout_surface* surf=NULL;
     uint32_t old_index = 0;
 
-    wl_list_for_each(surf, &layer->order.list_surface, order.link){
+    wl_list_for_each(surf, &layer->pending.list_surface, pending.link){
         int32_t new_index = find_surface(new_order, surface_num, surf);
         if(new_index < 0){
             fprintf(stderr, "invalid render order!!!\n");
