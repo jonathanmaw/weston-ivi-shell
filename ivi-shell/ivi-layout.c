@@ -2559,15 +2559,9 @@ ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
         return -1;
     }
 
-    if (pSurface == NULL) {
-        wl_list_for_each_safe(ivisurf, next, &ivilayer->pending.list_surface, pending.link) {
-            if (!wl_list_empty(&ivisurf->pending.link)) {
-                wl_list_remove(&ivisurf->pending.link);
-            }
+    clear_surface_pending_list(ivilayer);
 
-            wl_list_init(&ivisurf->pending.link);
-        }
-        ivilayer->event_mask |= IVI_NOTIFICATION_REMOVE;
+    if (pSurface == NULL) {
         return 0;
     }
 
