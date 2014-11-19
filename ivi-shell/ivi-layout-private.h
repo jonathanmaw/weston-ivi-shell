@@ -44,6 +44,8 @@ struct ivi_layout_surface {
     struct weston_transform layer_pos;
     struct weston_transform surface_scaling;
     struct weston_transform layer_scaling;
+    struct weston_transform surface_source_pos;
+    struct weston_transform layer_source_pos;
     struct ivi_layout_SurfaceProperties prop;
     int32_t pixelformat;
     uint32_t event_mask;
