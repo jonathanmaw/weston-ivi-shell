@@ -684,6 +684,67 @@ update_layer_position(struct ivi_layout_layer *ivilayer,
 }
 
 static void
+update_layer_source_position(struct ivi_layout_layer *ivilayer,
+                             struct ivi_layout_surface *ivisurf)
+{
+    struct weston_view *view;
+    struct weston_matrix *matrix = &ivisurf->layer_source_pos.matrix;
+    float tx = -(float)ivilayer->prop.sourceX;
+    float ty = -(float)ivilayer->prop.sourceY;
+
+    wl_list_for_each(view, &ivisurf->surface->views, surface_link)
+    {
+        if (view != NULL) {
+            break;
+        }
+    }
+
+    if (view == NULL) {
+        return;
+    }
+
+    wl_list_remove(&ivisurf->layer_source_pos.link);
+
+    weston_matrix_init(matrix);
+    weston_matrix_translate(matrix, tx, ty, 0.0f);
+    wl_list_insert(&view->geometry.transformation_list,
+                   &ivisurf->layer_source_pos.link);
+
+    weston_view_set_transform_parent(view, NULL);
+    weston_view_update_transform(view);
+}
+
+static void
+update_surface_source_position(struct ivi_layout_surface *ivisurf)
+{
+    struct weston_view *view;
+    struct weston_matrix *matrix = &ivisurf->surface_source_pos.matrix;
+    float tx = -(float)ivisurf->prop.sourceX;
+    float ty = -(float)ivisurf->prop.sourceY;
+
+    wl_list_for_each(view, &ivisurf->surface->views, surface_link)
+    {
+        if (view != NULL) {
+            break;
+        }
+    }
+
+    if (view == NULL) {
+        return;
+    }
+
+    wl_list_remove(&ivisurf->surface_source_pos.link);
+
+    weston_matrix_init(matrix);
+    weston_matrix_translate(matrix, tx, ty, 0.0f);
+    wl_list_insert(&view->geometry.transformation_list,
+                   &ivisurf->surface_source_pos.link);
+
+    weston_view_set_transform_parent(view, NULL);
+    weston_view_update_transform(view);
+}
+
+static void
 update_surface_scale(struct ivi_layout_surface *ivisurf)
 {
     struct weston_view *view;
@@ -767,9 +828,11 @@ update_prop(struct ivi_layout_layer *ivilayer,
         update_layer_orientation(ivilayer, ivisurf);
         update_layer_position(ivilayer, ivisurf);
         update_layer_scale(ivilayer, ivisurf);
+        update_layer_source_position(ivilayer, ivisurf);
         update_surface_position(ivisurf);
         update_surface_orientation(ivilayer, ivisurf);
         update_surface_scale(ivisurf);
+        update_surface_source_position(ivisurf);
 
         ivisurf->update_count++;
 
@@ -3195,12 +3258,16 @@ ivi_layout_surfaceSetNativeContent(struct weston_surface *surface,
         wl_list_remove(&ivisurf->layer_rotation.link);
         wl_list_remove(&ivisurf->surface_pos.link);
         wl_list_remove(&ivisurf->layer_pos.link);
+        wl_list_remove(&ivisurf->surface_source_pos.link);
+        wl_list_remove(&ivisurf->layer_source_pos.link);
         wl_list_remove(&ivisurf->surface_scaling.link);
         wl_list_remove(&ivisurf->layer_scaling.link);
         wl_list_init(&ivisurf->surface_rotation.link);
         wl_list_init(&ivisurf->layer_rotation.link);
         wl_list_init(&ivisurf->surface_pos.link);
         wl_list_init(&ivisurf->layer_pos.link);
+        wl_list_init(&ivisurf->surface_source_pos.link);
+        wl_list_init(&ivisurf->layer_source_pos.link);
         wl_list_init(&ivisurf->surface_scaling.link);
         wl_list_init(&ivisurf->layer_scaling.link);
 
@@ -3316,6 +3383,8 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
     weston_matrix_init(&ivisurf->layer_rotation.matrix);
     weston_matrix_init(&ivisurf->surface_pos.matrix);
     weston_matrix_init(&ivisurf->layer_pos.matrix);
+    weston_matrix_init(&ivisurf->surface_source_pos.matrix);
+    weston_matrix_init(&ivisurf->layer_source_pos.matrix);
     weston_matrix_init(&ivisurf->surface_scaling.matrix);
     weston_matrix_init(&ivisurf->layer_scaling.matrix);
 
@@ -3323,6 +3392,8 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
     wl_list_init(&ivisurf->layer_rotation.link);
     wl_list_init(&ivisurf->surface_pos.link);
     wl_list_init(&ivisurf->layer_pos.link);
+    wl_list_init(&ivisurf->surface_source_pos.link);
+    wl_list_init(&ivisurf->layer_source_pos.link);
     wl_list_init(&ivisurf->surface_scaling.link);
     wl_list_init(&ivisurf->layer_scaling.link);
 
