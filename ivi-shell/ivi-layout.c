@@ -2450,6 +2450,8 @@ ivi_layout_layerSetDimension(struct ivi_layout_layer *ivilayer,
 
     prop = &ivilayer->pending.prop;
 
+    prop->sourceWidth = pDimension[0];
+    prop->sourceHeight = pDimension[1];
     prop->destWidth  = pDimension[0];
     prop->destHeight = pDimension[1];
 
