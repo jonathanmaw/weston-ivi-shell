@@ -69,6 +69,7 @@ enum ivi_layout_notification_mask {
     IVI_NOTIFICATION_REMOVE      = (1 << 10),
     IVI_NOTIFICATION_CONFIGURE   = (1 << 11),
     IVI_NOTIFICATION_KEYBOARD_FOCUS = (1 << 12),
+    IVI_NOTIFICATION_POINTER_FOCUS = (1 << 13),
     IVI_NOTIFICATION_ALL         = 0xFFFF
 };
 

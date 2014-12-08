@@ -88,6 +88,7 @@ struct ivi_layout_SurfaceProperties
     int32_t  transitionType;
     uint32_t transitionDuration;
     uint32_t hasKeyboardFocus;
+    uint32_t hasPointerFocus;
 };
 
 struct ivi_layout_LayerProperties
