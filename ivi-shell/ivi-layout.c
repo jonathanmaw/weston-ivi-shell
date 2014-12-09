@@ -854,6 +854,122 @@ update_prop(struct ivi_layout_layer *ivilayer,
     }
 }
 
+static int
+compute_bbox(struct weston_matrix *mat, float *left, float *top,
+             float *right, float *bottom)
+{
+    float min_x = HUGE_VALF, min_y = HUGE_VALF;
+    float max_x = -HUGE_VALF, max_y = -HUGE_VALF;
+    float corners [4][2] = {
+        { *left, *top },
+        { *left, *bottom },
+        { *right, *top },
+        { *right, *bottom }
+    };
+    int i;
+
+    for (i = 0; i < 4; ++i) {
+        struct weston_vector vec = { { corners[i][0], corners[i][1],
+                                       0.0f, 1.0f } };
+        float x, y;
+        weston_matrix_transform(mat, &vec);
+
+        if (fabsf(vec.f[3]) < 1e-6) {
+            weston_log("warning: numerical instability in %s(), divisor = %g\n",
+                       __func__, vec.f[3]);
+            *left = *top = *right = *bottom = 0;
+            return 0;
+        }
+
+        x = vec.f[0] / vec.f[3];
+        y = vec.f[1] / vec.f[3];
+
+        if (x < min_x)
+            min_x = x;
+        if (x > max_x)
+            max_x = x;
+        if (y < min_y)
+            min_y = y;
+        if (y > max_y)
+            max_y = y;
+    }
+
+    *left = min_x;
+    *right = max_x;
+    *top = min_y;
+    *bottom = max_y;
+
+    return 1;
+}
+
+static void
+set_surface_mask(struct ivi_layout_surface *ivisurf)
+{
+    struct link_layer *link_layer = NULL;
+    struct ivi_layout_layer *ivilayer;
+
+    /* This doesn't make sense if a surface belongs to more than one layer */
+    if (wl_list_length(&ivisurf->list_layer) > 1) {
+        weston_log("%s: surface %d is in multiple layers! This implementation "
+                   "of surface and layer clipping will not make sense!\n",
+                   __FUNCTION__, ivisurf->id_surface);
+        return;
+    }
+
+    wl_list_for_each(link_layer, &ivisurf->list_layer, link)
+        break;
+
+    if (link_layer == NULL) {
+        return;
+    }
+
+    ivilayer = link_layer->ivilayer;
+
+    if (ivisurf->surface != NULL
+        && ivisurf->wl_layer_dirty) {
+        struct weston_matrix mat;
+        struct weston_transform *tform;
+        struct weston_view *view;
+        float top = 0;
+        float left = 0;
+        float right = ivisurf->surface->width;
+        float bottom = ivisurf->surface->height;
+        pixman_region32_t region;
+
+        wl_list_for_each(view, &ivisurf->surface->views, surface_link)
+            break;
+
+        if (view == NULL)
+            return;
+
+        weston_matrix_init(&mat);
+
+        /* Generate the transformation matrix */
+        wl_list_for_each(tform, &view->geometry.transformation_list, link) {
+            /* Exclude the surface source region position transform */
+            if (tform == &ivisurf->surface_source_pos)
+                continue;
+
+            weston_matrix_multiply(&mat, &tform->matrix);
+        }
+
+        /* Transform each coordinate */
+        compute_bbox(&mat, &left, &top, &right, &bottom);
+
+        /* Assemble the mask */
+        pixman_region32_init_rect(&region, left, top, right - left, bottom - top);
+        pixman_region32_intersect_rect(&region, &region,
+                                       ivilayer->pending.prop.destX,
+                                       ivilayer->pending.prop.destY,
+                                       ivilayer->pending.prop.destWidth,
+                                       ivilayer->pending.prop.destHeight);
+        ivisurf->wl_layer.mask = *pixman_region32_extents(&region);
+
+        pixman_region32_fini(&region);
+	ivisurf->wl_layer_dirty = 0;
+    }
+}
+
 static void
 commit_changes(struct ivi_layout *layout)
 {
@@ -865,9 +981,53 @@ commit_changes(struct ivi_layout *layout)
         wl_list_for_each(ivilayer, &iviscrn->order.list_layer, order.link) {
             wl_list_for_each(ivisurf, &ivilayer->order.list_surface, order.link) {
                 update_prop(ivilayer, ivisurf);
+                set_surface_mask(ivisurf);
             }
         }
     }
+}
+
+static void
+check_surface_mask_dirty(struct ivi_layout_surface *ivisurf)
+{
+    struct link_layer *link_layer = NULL;
+    struct ivi_layout_layer *ivilayer;
+
+    /* This doesn't make sense if a surface belongs to more than one layer */
+    if (wl_list_length(&ivisurf->list_layer) > 1) {
+        weston_log("%s: surface %d is in multiple layers! This implementation "
+                   "of surface and layer clipping will not make sense!\n",
+                   __FUNCTION__, ivisurf->id_surface);
+        return;
+    }
+
+    wl_list_for_each(link_layer, &ivisurf->list_layer, link)
+        break;
+
+    if (link_layer == NULL) {
+        return;
+    }
+
+    ivilayer = link_layer->ivilayer;
+
+    if (ivisurf->surface != NULL
+        && ivisurf->pending.prop.visibility != 0
+        && ivilayer->pending.prop.visibility != 0
+        && (ivilayer->prop.destX != ivilayer->pending.prop.destX
+            || ivilayer->prop.destY != ivilayer->pending.prop.destY
+            || ivilayer->prop.destWidth != ivilayer->pending.prop.destWidth
+            || ivilayer->prop.destHeight != ivilayer->pending.prop.destHeight
+            || ivilayer->prop.sourceWidth != ivilayer->pending.prop.sourceWidth
+            || ivilayer->prop.sourceHeight != ivilayer->pending.prop.sourceHeight
+            || ivisurf->prop.destX != ivisurf->pending.prop.destX
+            || ivisurf->prop.destY != ivisurf->pending.prop.destY
+            || ivisurf->prop.destWidth != ivisurf->pending.prop.destWidth
+            || ivisurf->prop.destHeight != ivisurf->pending.prop.destHeight
+            || ivisurf->prop.sourceWidth != ivisurf->pending.prop.sourceWidth
+            || ivisurf->prop.sourceHeight != ivisurf->pending.prop.sourceHeight)) {
+        ivisurf->wl_layer_dirty = 1;
+    }
+    
 }
 
 static void
@@ -876,6 +1036,8 @@ commit_list_surface(struct ivi_layout *layout)
     struct ivi_layout_surface *ivisurf = NULL;
 
     wl_list_for_each(ivisurf, &layout->list_surface, link) {
+        check_surface_mask_dirty(ivisurf);
+
         if(ivisurf->pending.prop.transitionType == IVI_LAYOUT_TRANSITION_VIEW_DEFAULT){
             ivi_layout_transition_move_resize_view(ivisurf,
                                                    ivisurf->pending.prop.destX,
@@ -989,6 +1151,7 @@ commit_list_layer(struct ivi_layout *layout)
                                              NULL, NULL,
                                              ivilayer->pending.prop.transitionDuration);
         }
+
         ivilayer->pending.prop.transitionType = IVI_LAYOUT_TRANSITION_NONE;
 
         ivilayer->prop = ivilayer->pending.prop;
@@ -1090,32 +1253,37 @@ commit_list_screen(struct ivi_layout *layout)
 
         iviscrn->event_mask = 0;
 
-        /* Clear view list of layout layer */
-        wl_list_init(&layout->layout_layer.view_list.link);
-
-        wl_list_for_each(ivilayer, &iviscrn->order.list_layer, order.link) {
-
-            if (ivilayer->prop.visibility == 0)
-                continue;
-
-            wl_list_for_each(ivisurf, &ivilayer->order.list_surface, order.link) {
+        wl_list_for_each_reverse(ivilayer, &iviscrn->order.list_layer, order.link) {
+            wl_list_for_each_reverse(ivisurf, &ivilayer->order.list_surface, order.link) {
                 struct weston_view *tmpview = NULL;
+
+                /* Remove weston layer from the compositor's list */
+                if (ivisurf->wl_layer.link.next)
+                    wl_list_remove(&ivisurf->wl_layer.link);
+
+                /* Clear layer's view list */
+                wl_list_init(&ivisurf->wl_layer.view_list.link);
+
+                if (ivisurf->surface == NULL)
+                    continue;
+
                 wl_list_for_each(tmpview, &ivisurf->surface->views, surface_link)
                 {
                     if (tmpview != NULL) {
                         break;
                     }
                 }
-
-                if (ivisurf->prop.visibility == 0)
+                
+                if (ivilayer->prop.visibility == 0
+                    || ivisurf->prop.visibility == 0
+                    || tmpview == NULL)
                     continue;
-                if (ivisurf->surface == NULL || tmpview == NULL)
-                    continue;
 
-                weston_layer_entry_insert(&layout->layout_layer.view_list,
+                weston_layer_entry_insert(&ivisurf->wl_layer.view_list,
                                           &tmpview->layer_link);
-
                 ivisurf->surface->output = iviscrn->output;
+                wl_list_insert(layout->compositor->layer_list.prev,
+                               &ivisurf->wl_layer.link);
             }
         }
 
@@ -1773,6 +1941,8 @@ ivi_layout_surfaceRemove(struct ivi_layout_surface *ivisurf)
         wl_list_remove(&ivisurf->link);
     }
     remove_ordersurface_from_layer(ivisurf);
+
+    wl_list_remove(&ivisurf->wl_layer.link);
 
     wl_signal_emit(&layout->surface_notification.removed, ivisurf);
 
@@ -3407,6 +3577,8 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
     wl_list_init(&ivisurf->order.link);
     wl_list_init(&ivisurf->order.list_layer);
 
+    weston_layer_init(&ivisurf->wl_layer, NULL);
+
     wl_list_insert(&layout->list_surface, &ivisurf->link);
 
     wl_signal_emit(&layout->surface_notification.created, ivisurf);
@@ -3628,9 +3800,6 @@ ivi_layout_initWithCompositor(struct weston_compositor *ec)
 
     /* Add a pointer created listener that adds pointer focus listeners */
     setup_pointer_listeners();
-
-    /* Add layout_layer at the last of weston_compositor.layer_list */
-    weston_layer_init(&layout->layout_layer, ec->layer_list.prev);
 
     create_screen(ec);
 
