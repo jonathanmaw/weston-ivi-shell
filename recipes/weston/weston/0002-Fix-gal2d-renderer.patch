@@ -1,0 +1,25 @@
+From 4b59836f8174bc8a9467ccc3a3c628b11b6bbb0d Mon Sep 17 00:00:00 2001
+From: Jonathan Maw <jonathan.maw@codethink.co.uk>
+Date: Tue, 14 Oct 2014 11:25:29 +0000
+Subject: [PATCH 2/3] Fix gal2d renderer
+
+---
+ src/gal2d-renderer.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/gal2d-renderer.c b/src/gal2d-renderer.c
+index c651573..3c8acc9 100644
+--- a/src/gal2d-renderer.c
++++ b/src/gal2d-renderer.c
+@@ -787,7 +787,7 @@ draw_view(struct weston_view *ev, struct weston_output *output,
+ 
+     pixman_region32_init(&repaint);
+ 	pixman_region32_intersect(&repaint,
+-				  &ev->transform.boundingbox, damage);
++				  &ev->transform.masked_boundingbox, damage);
+ 	pixman_region32_subtract(&repaint, &repaint, &ev->clip);
+ 
+ 	if (!pixman_region32_not_empty(&repaint))
+-- 
+1.7.9.5
+
