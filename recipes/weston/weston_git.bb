@@ -8,43 +8,103 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=275efac2559a224527bd4fd593d38466 \
 ADIT_SOURCE_GIT = "${BUILD_DIR}/weston"
 S= "${ADIT_SOURCE_GIT}"
 
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+
+SRC_URI_append_mx6q += " \
+  file://0001-ENGR00314805-2-Add-Vivante-GAL2D-support.patch \
+  file://0002-Fix-gal2d-renderer.patch \
+  file://0003-Add-a-gal2d-compositor.patch \
+"
+
 inherit adit-gitpkgv
 
 PKGV="${@adit_get_git_pkgv(d, '${ADIT_SOURCE_GIT}' )}"
 PR = ""
-DISTRO_PR=""
-
-
-#SRC_URI = "file://weston.png \
-#           file://weston.desktop"
-#SRC_URI[md5sum] = "ffe7c3bc0e7eb39a305cbbea8c7766f3"
-#SRC_URI[sha256sum] = "f7141334b141ae1a6435bd03bfdb01b7fb628f39259164f201e7e71c8d815bc7"
 
 inherit autotools pkgconfig useradd
 
 DEPENDS = "libxkbcommon gdk-pixbuf pixman cairo glib-2.0 jpeg"
 DEPENDS += "wayland virtual/egl pango "
 
-EXTRA_OECONF = "--enable-setuid-install \
-                --disable-xwayland \
-                --enable-simple-clients \
-                --enable-clients \
-                --disable-simple-egl-clients \
-                --disable-libunwind \
-                --disable-rpi-compositor \
-		--disable-xwayland-test \
-                --disable-rdp-compositor \
-		--disable-rpi-compositor"
+RDEPENDS_${PN} += "xkeyboard-config"
+RRECOMMENDS_${PN} = "liberation-fonts"
 
+PACKAGES =+ "${PN}-examples"
 
-PACKAGECONFIG ??= "x86 imx6q"
+FILES_${PN}-examples = " \
+  ${bindir}/weston-calibrator \
+  ${bindir}/weston-clickdot \
+  ${bindir}/weston-cliptest \
+  ${bindir}/weston-dnd \
+  ${bindir}/weston-editor \
+  ${bindir}/weston-eventdemo \
+  ${bindir}/weston-flower \
+  ${bindir}/weston-fullscreen \
+  ${bindir}/weston-image \
+  ${bindir}/weston-multi-resource \
+  ${bindir}/weston-resizor \
+  ${bindir}/weston-scaler \
+  ${bindir}/weston-simple-damage \
+  ${bindir}/weston-simple-egl \
+  ${bindir}/weston-simple-keyboard-binding \
+  ${bindir}/weston-simple-shm \
+  ${bindir}/weston-simple-touch \
+  ${bindir}/weston-smoke \
+  ${bindir}/weston-stacking \
+  ${bindir}/weston-subsurfaces \
+  ${bindir}/weston-transformed \
+"
+
+USERADD_PACKAGES = "${PN}"
+GROUPADD_PARAM_${PN} = "--system weston-launch"
+
+EXTRA_OEMAKE_append = " \
+  libexecdir="/usr/lib/weston" \
+  COMPOSITOR_LIBS="-lGLESv2 -lEGL -lwayland-server -lxkbcommon -lpixman-1" \
+  COMPOSITOR_CFLAGS="-I ${STAGING_DIR_HOST}/usr/include/pixman-1 -DLINUX=1 -DEGL_API_FB -DEGL_API_WL" \
+  FB_COMPOSITOR_CFLAGS="-DLINUX=1 -DEGL_API_FB -DEGL_API_WL -I $WLD/include" \
+  FB_COMPOSITOR_LIBS="-lGLESv2 -lEGL -lwayland-server -lxkbcommon" \
+  GAL2D_COMPOSITOR_LIBS="-lGAL -ludev -lmtdev" \
+  SIMPLE_EGL_CLIENT_CFLAGS="-DLINUX -DEGL_API_FB -DEGL_API_WL" \
+"
+
+EXTRA_OECONF_append = " \
+  --enable-clients \
+  --enable-demo-clients-install \
+  --enable-setuid-install \
+  --enable-simple-clients \
+  --enable-simple-egl-clients \
+  --disable-libunwind \
+  --disable-rdp-compositor \
+  --disable-rpi-compositor \
+  --disable-xwayland \
+  --disable-xwayland-test \
+"
+
+EXTRA_OECONF_append_mx6q += " \
+  WESTON_NATIVE_BACKEND=gal2d-backend.so \
+"
+
+EXTRA_OECONF_append_oracle-virtualbox += " \
+  WESTON_NATIVE_BACKEND=drm-backend.so \
+"
+
+EXTRA_OECONF_append_baytrail += " \
+  WESTON_NATIVE_BACKEND=drm-backend.so \
+"
+
+PACKAGECONFIG_mx6q = "imx6"
+PACKAGECONFIG_oracle-virtualbox = "x86 fbdev"
+PACKAGECONFIG_baytrail = "x86 fbdev"
+
 #
 # Compositor choices
 #
 # Weston on KMS
 PACKAGECONFIG[x86] = "--enable-drm-compositor,--disable-drm-compositor,drm udev mesa mtdev"
-# Weston on framebuffer
-PACKAGECONFIG[imx6q] = "--enable-gal2d-compositor, --disable-gal2d-compositor ,udev mtdev"
+# Weston on imx6
+PACKAGECONFIG[imx6] = "--enable-gal2d-compositor,--disable-gal2d-compositor,udev mtdev"
+# Weston on wayland
 PACKAGECONFIG[wayland] = "--enable-wayland-compositor,--disable-wayland-compositor,mesa"
 # Weston on X11
 PACKAGECONFIG[x11] = "--enable-x11-compositor,--disable-x11-compositor,virtual/libx11 libxcb libxcursor cairo"
@@ -55,31 +115,11 @@ PACKAGECONFIG[fbdev] = "--enable-fbdev-compositor,--disable-fbdev-compositor,ude
 # weston-launch
 PACKAGECONFIG[launch] = "--enable-weston-launch,--disable-weston-launch,libpam"
 # Weston with libinput backend
-PACKAGECONFIG[libinput] = "--enable-libinput-backend,--disable-libinput-backend,libinput "
-
-#do_configure_prepend_mx6q() {
-#        cp ${BUILD_DIR}/oe-*/build/tmp/sysroots/x86_64-linux/usr/lib/pkgconfig/wayland-scanner.pc ${BUILD_DIR}/oe-MGC_20131203-mx6q/build/tmp/sysroots/mx6q/usr/lib/pkgconfig/
-#}
-
-#do_configure_prepend_oracle-virtualbox() {
-#        cp ${BUILD_DIR}/oe-*/build/tmp/sysroots/x86_64-linux/usr/lib/pkgconfig/wayland-scanner.pc ${BUILD_DIR}/oe-*/build/tmp/sysroots/oracle-virtualbox/usr/lib/pkgconfig/
-#}
+PACKAGECONFIG[libinput] = "--enable-libinput-backend,--disable-libinput-backend,libinput"
 
 do_configure_prepend() {
         cp -v ${STAGING_DIR_NATIVE}/${libdir}/pkgconfig/wayland-scanner.pc ${STAGING_DIR_TARGET}/${libdir}/pkgconfig/
 }
-
-#do_install_append_mx6q() {
-#	# Weston doesn't need the .la files to load modules, so wipe them
-#	rm -f ${D}/${libdir}/weston/*.la
-#        rm ${BUILD_DIR}/oe-MGC_20131203-mx6q/build/tmp/sysroots/mx6q/usr/lib/pkgconfig/wayland-scanner.pc
-#}
-#
-#do_install_append_oracle-virtualbox() {
-#	# Weston doesn't need the .la files to load modules, so wipe them
-#	rm -f ${D}/${libdir}/weston/*.la
-#        rm ${BUILD_DIR}/oe-*/build/tmp/sysroots/oracle-virtualbox/usr/lib/pkgconfig/wayland-scanner.pc
-#}
 
 do_install_append() {
         # Weston doesn't need the .la files to load modules, so wipe them
@@ -87,13 +127,3 @@ do_install_append() {
         rm -v ${STAGING_DIR_TARGET}/${libdir}/pkgconfig/wayland-scanner.pc
 }
 
-PACKAGES += "${PN}-examples"
-
-FILES_${PN} = "${bindir}/weston ${bindir}/weston-terminal ${bindir}/weston-info ${bindir}/weston-launch ${bindir}/wcap-decode ${libexecdir} ${datadir}"
-FILES_${PN}-examples = "${bindir}/*"
-
-RDEPENDS_${PN} += "xkeyboard-config"
-RRECOMMENDS_${PN} = "liberation-fonts"
-
-USERADD_PACKAGES = "${PN}"
-GROUPADD_PARAM_${PN} = "--system weston-launch"
