@@ -1229,6 +1229,7 @@ commit_list_screen(struct ivi_layout *layout)
                     ivilayer->event_mask |= IVI_NOTIFICATION_ADD;
                 }
             }
+        iviscrn->event_mask ^= IVI_NOTIFICATION_RENDER_ORDER;
         }
 
         iviscrn->event_mask = 0;
