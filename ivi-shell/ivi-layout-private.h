@@ -36,8 +36,6 @@ struct ivi_layout_surface {
 
     struct ivi_layout *layout;
     struct weston_surface *surface;
-    struct weston_layer wl_layer; /* Used for clipping and render order */
-    int wl_layer_dirty;
 
     struct wl_listener surface_destroy_listener;
     struct weston_transform surface_rotation;
@@ -178,6 +176,7 @@ struct ivi_layout {
         struct wl_signal configure_changed;
     } surface_notification;
 
+    struct weston_layer layout_layer;
     struct wl_signal warning_signal;
 
     struct ivi_layout_transition_set* transitions;
