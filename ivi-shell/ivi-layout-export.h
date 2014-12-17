@@ -291,21 +291,6 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
 */
 
 /**
- * \brief Set the native content of an application to be used as surface content.
- *        If wl_surface is NULL, remove the native content of a surface
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-/*
-int32_t
-ivi_layout_surfaceSetNativeContent(struct weston_surface *wl_surface,
-                                      uint32_t width,
-                                      uint32_t height,
-                                      uint32_t id_surface);
-*/
-
-/**
  * \brief Set an observer callback for surface content status change.
  *
  * \return  0 if the method call was successful

@@ -128,10 +128,6 @@ struct ivi_layout_interface {
 	struct weston_view* (*get_weston_view)(struct ivi_layout_surface *surface);
 	void (*surfaceConfigure)(struct ivi_layout_surface *ivisurf,
 				 int32_t width, int32_t height);
-	int32_t (*surfaceSetNativeContent)(struct weston_surface *wl_surface,
-                                           int32_t width,
-                                           int32_t height,
-                                           uint32_t id_surface);
 	struct ivi_layout_surface* (*surfaceCreate)(struct weston_surface *wl_surface,
 							      uint32_t id_surface);
 	void (*initWithCompositor)(struct weston_compositor *ec);

@@ -144,7 +144,6 @@ surface_destroy(struct wl_client *client, struct wl_resource *resource)
         ivisurf->surface->configure = NULL;
         ivisurf->surface->configure_private = NULL;
         ivisurf->surface = NULL;
-        ivi_layout->surfaceSetNativeContent(NULL, 0, 0, ivisurf->id_surface);
         ivi_layout->remove_surface_configured_listener(ivisurf->layout_surface, &ivisurf->configured_listener);
     }
 

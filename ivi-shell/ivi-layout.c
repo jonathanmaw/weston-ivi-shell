@@ -3194,83 +3194,6 @@ ivi_layout_surfaceConfigure(struct ivi_layout_surface *ivisurf,
     }
 }
 
-static int32_t
-ivi_layout_surfaceSetNativeContent(struct weston_surface *surface,
-                                      int32_t width,
-                                      int32_t height,
-                                      uint32_t id_surface)
-{
-    struct ivi_layout *layout = get_instance();
-    struct ivi_layout_surface *ivisurf;
-
-    ivisurf = get_surface(&layout->list_surface, id_surface);
-    if (ivisurf == NULL) {
-        weston_log("layout surface is not found\n");
-        return -1;
-    }
-
-    if (ivisurf->surface != NULL) {
-        if (surface != NULL) {
-            weston_log("id_surface(%d) is already set the native content\n",
-                       id_surface);
-            return -1;
-        }
-
-        wl_list_remove(&ivisurf->surface_rotation.link);
-        wl_list_remove(&ivisurf->layer_rotation.link);
-        wl_list_remove(&ivisurf->surface_pos.link);
-        wl_list_remove(&ivisurf->layer_pos.link);
-        wl_list_remove(&ivisurf->surface_source_pos.link);
-        wl_list_remove(&ivisurf->layer_source_pos.link);
-        wl_list_remove(&ivisurf->surface_scaling.link);
-        wl_list_remove(&ivisurf->layer_scaling.link);
-        wl_list_init(&ivisurf->surface_rotation.link);
-        wl_list_init(&ivisurf->layer_rotation.link);
-        wl_list_init(&ivisurf->surface_pos.link);
-        wl_list_init(&ivisurf->layer_pos.link);
-        wl_list_init(&ivisurf->surface_source_pos.link);
-        wl_list_init(&ivisurf->layer_source_pos.link);
-        wl_list_init(&ivisurf->surface_scaling.link);
-        wl_list_init(&ivisurf->layer_scaling.link);
-
-    }
-
-    if (surface == NULL) {
-        if (ivisurf->content_observer.callback) {
-            (*(ivisurf->content_observer.callback))(ivisurf,
-                                    0, ivisurf->content_observer.userdata);
-        }
-
-        ivi_layout_surfaceRemoveNotification(ivisurf);
-        return 0;
-    }
-
-    ivisurf->surface = surface;
-    ivisurf->surface_destroy_listener.notify =
-        westonsurface_destroy_from_ivisurface;
-    wl_resource_add_destroy_listener(surface->resource,
-                                     &ivisurf->surface_destroy_listener);
-
-    struct weston_view *tmpview = weston_view_create(surface);
-    if (tmpview == NULL) {
-        weston_log("fails to allocate memory\n");
-        return -1;
-    }
-
-    ivisurf->surface->width_from_buffer  = width;
-    ivisurf->surface->height_from_buffer = height;
-    ivisurf->pixelformat = IVI_LAYOUT_SURFACE_PIXELFORMAT_RGBA_8888;
-
-    wl_signal_emit(&layout->surface_notification.created, ivisurf);
-
-    if (ivisurf->content_observer.callback) {
-        (*(ivisurf->content_observer.callback))(ivisurf,
-                                     1, ivisurf->content_observer.userdata);
-    }
-
-    return 0;
-}
-
 WL_EXPORT int32_t
 ivi_layout_surfaceSetContentObserver(struct ivi_layout_surface *ivisurf,
                                      ivi_controller_surface_content_callback callback,
@@ -3299,19 +3222,8 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
 
     ivisurf = get_surface(&layout->list_surface, id_surface);
     if (ivisurf != NULL) {
-        if (ivisurf->surface != NULL) {
             weston_log("id_surface(%d) is already created\n", id_surface);
             return NULL;
-        } else {
-            /* if ivisurf->surface exist, wl_surface is tied to id_surface again */
-            /* This means client destroys ivi_surface once, and then tries to tie
-                the id_surface to new wl_surface again. The property of id_surface can
-                be inherited.
-            */
-            ivi_layout_surfaceSetNativeContent(
-                wl_surface, wl_surface->width, wl_surface->height, id_surface);
-            return ivisurf;
-        }
     }
 
     ivisurf = calloc(1, sizeof *ivisurf);
@@ -3688,7 +3600,6 @@ ivi_layout_surfaceRemoveConfiguredListener(struct ivi_layout_surface* ivisurf,
 WL_EXPORT struct ivi_layout_interface ivi_layout_interface = {
 	.get_weston_view = ivi_layout_get_weston_view,
 	.surfaceConfigure = ivi_layout_surfaceConfigure,
-	.surfaceSetNativeContent = ivi_layout_surfaceSetNativeContent,
 	.surfaceCreate = ivi_layout_surfaceCreate,
 	.initWithCompositor = ivi_layout_initWithCompositor,
 	.emitWarningSignal = ivi_layout_emitWarningSignal,
