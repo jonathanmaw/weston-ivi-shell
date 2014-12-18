@@ -348,15 +348,6 @@ int32_t
 ivi_layout_getPropertiesOfLayer(struct ivi_layout_layer *ivilayer,
                 struct ivi_layout_LayerProperties *pLayerProperties);
 
-/**
- * \brief  Get the number of hardware layers of a screen
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_getNumberOfHardwareLayers(uint32_t id_screen,
-                                        int32_t *pNumberOfHardwareLayers);
 
 /**
  * \brief Get the screens
@@ -447,16 +438,6 @@ ivi_layout_layerCreateWithDimension(uint32_t id_layer,
  */
 int32_t
 ivi_layout_layerRemove(struct ivi_layout_layer *ivilayer);
-
-/**
- * \brief Get the current type of the layer.
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_layerGetType(struct ivi_layout_layer *ivilayer,
-                           int32_t *pLayerType);
 
 /**
  * \brief Set the visibility of a layer. If a layer is not visible, the layer and its
@@ -583,16 +564,6 @@ ivi_layout_layerGetOrientation(struct ivi_layout_layer *ivilayer,
                                   int32_t *pOrientation);
 
 /**
- * \brief Sets the color value which defines the transparency value.
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_layerSetChromaKey(struct ivi_layout_layer *ivilayer,
-                                int32_t* pColor);
-
-/**
  * \brief Sets render order of surfaces within one layer
  *
  * \return  0 if the method call was successful
@@ -602,26 +573,6 @@ int32_t
 ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
                                   struct ivi_layout_surface **pSurface,
                                   int32_t number);
-
-/**
- * \brief Get the capabilities of a layer
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_layerGetCapabilities(struct ivi_layout_layer *ivilayer,
-                                   int32_t *pCapabilities);
-
-/**
- * \brief Get the possible capabilities of a layertype
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_layerTypeGetCapabilities(int32_t layerType,
-                                       int32_t *pCapabilities);
 
 /**
  * \brief Create the logical surface, which has no native buffer associated
@@ -829,24 +780,6 @@ int32_t
 ivi_layout_screenSetRenderOrder(struct ivi_layout_screen *iviscrn,
                                    struct ivi_layout_layer **pLayer,
                                    const int32_t number);
-
-/**
- * \brief Enable or disable a rendering optimization
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_SetOptimizationMode(uint32_t id, int32_t mode);
-
-/**
- * \brief Get the current enablement for an optimization
- *
- * \return  0 if the method call was successful
- * \return -1 if the method call was failed
- */
-int32_t
-ivi_layout_GetOptimizationMode(uint32_t id, int32_t *pMode);
 
 /**
  * \brief register for notification on property changes of layer

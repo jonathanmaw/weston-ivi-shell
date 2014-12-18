@@ -1792,17 +1792,6 @@ ivi_layout_getPropertiesOfLayer(struct ivi_layout_layer *ivilayer,
 }
 
 WL_EXPORT int32_t
-ivi_layout_getNumberOfHardwareLayers(uint32_t id_screen,
-                              int32_t *pNumberOfHardwareLayers)
-{
-    /* TODO */
-    (void)id_screen;
-    (void)pNumberOfHardwareLayers;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
 ivi_layout_getScreens(int32_t *pLength, struct ivi_layout_screen ***ppArray)
 {
     struct ivi_layout *layout = get_instance();
@@ -2114,17 +2103,6 @@ ivi_layout_layerRemove(struct ivi_layout_layer *ivilayer)
 }
 
 WL_EXPORT int32_t
-ivi_layout_layerGetType(struct ivi_layout_layer *ivilayer,
-                        int32_t *pLayerType)
-{
-    /* TODO */
-    (void)ivilayer;
-    (void)pLayerType;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
 ivi_layout_layerSetVisibility(struct ivi_layout_layer *ivilayer,
                               int32_t newVisibility)
 {
@@ -2338,16 +2316,6 @@ ivi_layout_layerGetOrientation(struct ivi_layout_layer *ivilayer,
 }
 
 WL_EXPORT int32_t
-ivi_layout_layerSetChromaKey(struct ivi_layout_layer *ivilayer, int32_t* pColor)
-{
-    /* TODO */
-    (void)ivilayer;
-    (void)pColor;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
 ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
                         struct ivi_layout_surface **pSurface,
                         int32_t number)
@@ -2387,28 +2355,6 @@ ivi_layout_layerSetRenderOrder(struct ivi_layout_layer *ivilayer,
     }
 
     ivilayer->event_mask |= IVI_NOTIFICATION_RENDER_ORDER;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
-ivi_layout_layerGetCapabilities(struct ivi_layout_layer *ivilayer,
-                                int32_t *pCapabilities)
-{
-    /* TODO */
-    (void)ivilayer;
-    (void)pCapabilities;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
-ivi_layout_layerTypeGetCapabilities(int32_t layerType,
-                                    int32_t *pCapabilities)
-{
-    /* TODO */
-    (void)layerType;
-    (void)pCapabilities;
 
     return 0;
 }
@@ -2785,16 +2731,6 @@ ivi_layout_surfaceGetPixelformat(struct ivi_layout_layer *ivisurf, int32_t *pPix
 }
 
 WL_EXPORT int32_t
-ivi_layout_surfaceSetChromaKey(struct ivi_layout_surface *ivisurf, int32_t* pColor)
-{
-    /* TODO */
-    (void)ivisurf;
-    (void)pColor;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
 ivi_layout_screenAddLayer(struct ivi_layout_screen *iviscrn,
                           struct ivi_layout_layer *addlayer)
 {
@@ -2966,26 +2902,6 @@ ivi_layout_surfaceGetSize(struct ivi_layout_surface *ivisurf, int32_t *width, in
 
         *stride = ivisurf->prop.sourceWidth * (bpp / 8);
     }
-
-    return 0;
-}
-
-WL_EXPORT int32_t
-ivi_layout_SetOptimizationMode(uint32_t id, int32_t mode)
-{
-    /* TODO */
-    (void)id;
-    (void)mode;
-
-    return 0;
-}
-
-WL_EXPORT int32_t
-ivi_layout_GetOptimizationMode(uint32_t id, int32_t *pMode)
-{
-    /* TODO */
-    (void)id;
-    (void)pMode;
 
     return 0;
 }
