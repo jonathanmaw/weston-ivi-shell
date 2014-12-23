@@ -3378,6 +3378,7 @@ ivi_layout_surfaceCreate(struct weston_surface *wl_surface,
     wl_list_init(&ivisurf->order.link);
     wl_list_init(&ivisurf->order.list_layer);
 
+    wl_list_init(&ivisurf->wl_layer.link);
     weston_layer_init(&ivisurf->wl_layer, NULL);
 
     wl_list_insert(&layout->list_surface, &ivisurf->link);
