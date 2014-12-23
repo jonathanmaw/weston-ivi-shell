@@ -1388,6 +1388,17 @@ remove_all_notification(struct wl_list *listener_list)
     }
 }
 
+static void
+remove_configured_listener(struct ivi_layout_surface *ivisurf)
+{
+	struct wl_listener *link = NULL;
+	struct wl_listener *next = NULL;
+
+	wl_list_for_each_safe(link, next, &ivisurf->configured.listener_list, link) {
+		wl_list_remove(&link->link);
+	}
+}
+
 /**
  * Exported APIs of ivi-layout library are implemented from here.
  * Brief of APIs is described in ivi-layout-export.h.
@@ -1749,10 +1760,10 @@ ivi_layout_surfaceRemove(struct ivi_layout_surface *ivisurf)
     remove_ordersurface_from_layer(ivisurf);
 
     wl_signal_emit(&layout->surface_notification.removed, ivisurf);
+ 
+    remove_configured_listener(ivisurf);
 
     ivi_layout_surfaceRemoveNotification(ivisurf);
-
-    free(ivisurf);
 
     return 0;
 }
@@ -3499,20 +3510,6 @@ ivi_layout_surfaceAddConfiguredListener(struct ivi_layout_surface* ivisurf,
     wl_signal_add(&ivisurf->configured, listener);
 }
 
-static void
-ivi_layout_surfaceRemoveConfiguredListener(struct ivi_layout_surface* ivisurf,
-                                           struct wl_listener* target)
-{
-    struct wl_listener *listener = NULL;
-    struct wl_listener *next = NULL;
-
-    wl_list_for_each_safe(listener, next, &ivisurf->configured.listener_list, link) {
-        if (target == listener) {
-            wl_list_remove(&listener->link);
-        }
-    }
-}
-
 WL_EXPORT struct ivi_layout_interface ivi_layout_interface = {
 	.get_weston_view = ivi_layout_get_weston_view,
 	.surfaceConfigure = ivi_layout_surfaceConfigure,
@@ -3522,5 +3519,4 @@ WL_EXPORT struct ivi_layout_interface ivi_layout_interface = {
         .grab_keyboard_key = ivi_layout_grabKeyboardKey,
         .get_surface_dimension = ivi_layout_surfaceGetDimension,
         .add_surface_configured_listener = ivi_layout_surfaceAddConfiguredListener,
-        .remove_surface_configured_listener = ivi_layout_surfaceRemoveConfiguredListener
 };
