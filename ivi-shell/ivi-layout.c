@@ -901,9 +901,9 @@ set_surface_mask(struct ivi_layout_surface *ivisurf)
 
     /* This doesn't make sense if a surface belongs to more than one layer */
     if (wl_list_length(&ivisurf->list_layer) > 1) {
-        weston_log("%s: surface %d is in multiple layers! This implementation "
-                   "of surface and layer clipping will not make sense!\n",
-                   __FUNCTION__, ivisurf->id_surface);
+        wl_list_for_each(link_layer, &ivisurf->list_layer, link)
+            weston_log("%s: surface %d is in multiple layers, including layer %d\n",
+                       __FUNCTION__, ivisurf->id_surface, link_layer->ivilayer->id_layer);
         return;
     }
 
@@ -986,9 +986,9 @@ check_surface_mask_dirty(struct ivi_layout_surface *ivisurf)
 
     /* This doesn't make sense if a surface belongs to more than one layer */
     if (wl_list_length(&ivisurf->list_layer) > 1) {
-        weston_log("%s: surface %d is in multiple layers! This implementation "
-                   "of surface and layer clipping will not make sense!\n",
-                   __FUNCTION__, ivisurf->id_surface);
+        wl_list_for_each(link_layer, &ivisurf->list_layer, link)
+            weston_log("%s: surface %d is in multiple layers, including layer %d\n",
+                       __FUNCTION__, ivisurf->id_surface, link_layer->ivilayer->id_layer);
         return;
     }
 
