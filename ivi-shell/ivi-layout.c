@@ -921,6 +921,8 @@ set_surface_mask(struct ivi_layout_surface *ivisurf)
     ivilayer = link_layer->ivilayer;
 
     if (ivisurf->surface != NULL
+        && ivisurf->surface->width != 0
+        && ivisurf->surface->height != 0
         && ivisurf->wl_layer_dirty) {
         struct weston_matrix mat;
         struct weston_transform *tform;
