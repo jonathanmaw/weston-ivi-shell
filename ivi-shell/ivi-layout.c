@@ -1035,6 +1035,14 @@ commit_list_surface(struct ivi_layout *layout)
     wl_list_for_each(ivisurf, &layout->list_surface, link) {
         check_surface_mask_dirty(ivisurf);
 
+        /* Remove weston layer from the compositor's list
+         * If the surface is in the layout, it'll be re-added */
+        if (ivisurf->wl_layer.link.next)
+            wl_list_remove(&ivisurf->wl_layer.link);
+
+        /* Clear layer's view list */
+        wl_list_init(&ivisurf->wl_layer.view_list.link);
+
         if(ivisurf->pending.prop.transitionType == IVI_LAYOUT_TRANSITION_VIEW_DEFAULT){
             ivi_layout_transition_move_resize_view(ivisurf,
                                                    ivisurf->pending.prop.destX,
@@ -1234,13 +1242,6 @@ commit_list_screen(struct ivi_layout *layout)
         wl_list_for_each_reverse(ivilayer, &iviscrn->order.list_layer, order.link) {
             wl_list_for_each_reverse(ivisurf, &ivilayer->order.list_surface, order.link) {
                 struct weston_view *tmpview = NULL;
-
-                /* Remove weston layer from the compositor's list */
-                if (ivisurf->wl_layer.link.next)
-                    wl_list_remove(&ivisurf->wl_layer.link);
-
-                /* Clear layer's view list */
-                wl_list_init(&ivisurf->wl_layer.view_list.link);
 
                 if (ivisurf->surface == NULL)
                     continue;
