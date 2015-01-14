@@ -1930,7 +1930,8 @@ ivi_layout_surfaceRemove(struct ivi_layout_surface *ivisurf)
     }
     remove_ordersurface_from_layer(ivisurf);
 
-    wl_list_remove(&ivisurf->wl_layer.link);
+    if (ivisurf->wl_layer.link.next)
+        wl_list_remove(&ivisurf->wl_layer.link);
 
     wl_signal_emit(&layout->surface_notification.removed, ivisurf);
  
